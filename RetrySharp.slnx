@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RetrySharp.Tests/RetrySharp.Tests.csproj" />
+  <Project Path="RetrySharp/RetrySharp.csproj" />
+</Solution>
