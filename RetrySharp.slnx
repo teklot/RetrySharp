@@ -1,7 +1,5 @@
 <Solution>
-  <Folder Name="/Solution Items/">
-    <File Path="README.md" />
-  </Folder>
+  <Folder Name="/Solution Items/" />
   <Project Path="RetryConsole/RetryConsole.csproj" />
   <Project Path="RetrySharp.Tests/RetrySharp.Tests.csproj" />
   <Project Path="RetrySharp/RetrySharp.csproj" />
