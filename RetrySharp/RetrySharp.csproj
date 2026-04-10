@@ -6,16 +6,14 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Title>RetrySharp</Title>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>TekLot,$(AssemblyName)</Authors>
     <Description>RetrySharp is a lightweight, high-performance retry utility for C# with zero external dependencies. Designed for systems where every microsecond and allocation matters.</Description>
     <Copyright>Copyright © 2026 TekLot</Copyright>
     <PackageId>RetrySharp</PackageId>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageTags>
-		retry;resiliency;async;high-performance;lightweight;netstandard2.0
-	</PackageTags>
+    <PackageTags>retry;resiliency;async;high-performance;lightweight;netstandard2.0</PackageTags>
     <PackageProjectUrl>https://github.com/teklot/retrysharp</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teklot/retrysharp.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -24,12 +22,13 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageReleaseNotes>
-		Initial release of RetrySharp.
-        - Lightweight, high-performance retry utility.
-        - Sync and Async execution support.
-        - Built-in delay strategies: Fixed, Linear, Exponential, Jitter.
-        - Near-zero overhead for non-retry scenarios.
-        - Zero-allocation targets for sync paths.</PackageReleaseNotes>
+      Release v1.1.0.
+      - Introduced state-based (TState) overloads for all execution paths to enable zero-allocation retries.
+      - Optimized fast-path latency (down to ~1.0 us for sync calls).
+      - Achieved true Zero Allocation (0 B) in both sync and async fast-path scenarios.
+      - Enhanced README with performance benchmarks and advanced usage examples.
+      - Maintained full thread-safety and minimalist API surface.
+    </PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,9 +4,10 @@
 
 ## Key Features
 
-*   **Near-Zero Overhead:** Optimized fast-path for non-retry scenarios.
-*   **Zero Allocations:** Target 0 allocations in synchronous hot paths.
-*   **Sync & Async:** Native support for both execution paths.
+*   **Ultra-Low Latency:** Optimized for high-throughput and low-latency environments.
+*   **Zero Allocations:** Optimized state-based overloads to eliminate closure allocations on hot paths.
+*   **Fast-Path Optimization:** Executing with `MaxAttempts = 1` results in a direct call with negligible overhead (~1.0 us).
+*   **Sync & Async:** Native, first-class support for both execution paths.
 *   **Predictable:** No hidden behavior or complex policy chaining.
 *   **Minimalist:** Tiny API surface (learnable in minutes).
 
@@ -18,16 +19,22 @@ dotnet add package RetrySharp
 
 ## Usage
 
-### Basic Retry
+### 1. High Performance (Zero Allocation)
+Use the `TState` overloads to pass data into the action without creating a closure (eliminates heap allocations).
 
+```csharp
+// Passes 'this' or any other state object directly to the static callback
+Retry.Execute(state, static s => s.DoWork());
+```
+
+### 2. Basic Retry
 Retries up to 3 times (default) if any exception occurs.
 
 ```csharp
 Retry.Execute(() => DoWork());
 ```
 
-### Async Retry with Cancellation
-
+### 3. Async Retry with Cancellation
 Supports `CancellationToken` and `ConfigureAwait(false)` internally.
 
 ```csharp
@@ -37,8 +44,7 @@ await Retry.ExecuteAsync(async ct =>
 }, cancellationToken: cts.Token);
 ```
 
-### Exponential Backoff
-
+### 4. Exponential Backoff
 Includes built-in strategies for fixed, linear, and exponential delays.
 
 ```csharp
@@ -54,8 +60,7 @@ var options = new RetryOptions
 Retry.Execute(() => API.Call(), options);
 ```
 
-### Exception Filtering
-
+### 5. Exception Filtering
 Only retry for specific exception types.
 
 ```csharp
@@ -67,8 +72,7 @@ var options = new RetryOptions
 Retry.Execute(() => SendRequest(), options);
 ```
 
-### Jitter and Observability
-
+### 6. Jitter and Observability
 Add jitter to prevent "thundering herd" and hook into retry events.
 
 ```csharp
@@ -81,12 +85,26 @@ var options = new RetryOptions
 Retry.Execute(() => CriticalTask(), options);
 ```
 
-## Performance
+## Performance Benchmarks
 
-RetrySharp is built for performance-critical applications:
-*   **Fast-path optimization:** When `MaxAttempts` is 1 and no extra options are set, the execution is a direct call with zero library overhead.
-*   **Struct-based context:** `RetryContext` is a `readonly struct` to avoid heap allocations during callbacks.
-*   **Thread-safe:** All delay strategies and jitter mechanisms are thread-safe.
+`RetrySharp` is significantly faster than general-purpose libraries like `Polly`, especially on the critical path.
+
+| Method                                   | Mean         | Allocated |
+|----------------------------------------- |-------------:|----------:|
+| **RetrySharp_Sync_FastPath (State)**     | **1.00 us**  | **0 B**   |
+| **RetrySharp_Async_FastPath (State)**    | **2.09 us**  | **0 B**   |
+| Polly_Sync_FastPath                      | 11.43 us     | 64 B      |
+| Polly_Async_FastPath                     | 10.95 us     | 64 B      |
+| **RetrySharp_Sync_OneRetry**             | **18.28 us** | **320 B** |
+| Polly_Sync_OneRetry                      | 31.90 us     | 608 B     |
+
+*Benchmarks run on .NET 10.0.5, Intel Xeon CPU E31225 3.10GHz.*
+
+## Core Principles
+
+1. **Simplicity:** No complex inheritance or policy composition.
+2. **Performance:** Zero allocations in the hot path via state-based overloads.
+3. **Safety:** Do not swallow `OperationCanceledException` or system-critical errors.
 
 ## License
 

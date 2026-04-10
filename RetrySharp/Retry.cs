@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,18 +16,46 @@ public static class Retry
     /// <param name="action">The action to execute.</param>
     /// <param name="options">Optional retry configuration.</param>
     /// <exception cref="ArgumentNullException">Thrown when action is null.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Execute(Action action, RetryOptions? options = null)
     {
         if (action == null) throw new ArgumentNullException(nameof(action));
         options ??= RetryOptions.Default;
 
-        // Fast path
-        if (options.MaxAttempts <= 1 && options.DelayStrategy == null && options.ExceptionFilter == null && options.OnRetry == null)
+        if (IsFastPath(options))
         {
             action();
             return;
         }
 
+        ExecuteInternal(action, options);
+    }
+
+    /// <summary>
+    /// Executes the specified action with retry logic and state.
+    /// </summary>
+    /// <typeparam name="TState">The type of the state object.</typeparam>
+    /// <param name="state">The state object to pass to the action.</param>
+    /// <param name="action">The action to execute.</param>
+    /// <param name="options">Optional retry configuration.</param>
+    /// <exception cref="ArgumentNullException">Thrown when action is null.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Execute<TState>(TState state, Action<TState> action, RetryOptions? options = null)
+    {
+        if (action == null) throw new ArgumentNullException(nameof(action));
+        options ??= RetryOptions.Default;
+
+        if (IsFastPath(options))
+        {
+            action(state);
+            return;
+        }
+
+        ExecuteInternal(state, action, options);
+    }
+
+    private static void ExecuteInternal(Action action, RetryOptions options)
+    {
         int attempt = 0;
         while (true)
         {
@@ -34,6 +63,24 @@ public static class Retry
             try
             {
                 action();
+                return;
+            }
+            catch (Exception ex) when (attempt < options.MaxAttempts && RetryOptions.IsRetriable(ex) && (options.ExceptionFilter == null || options.ExceptionFilter(ex)))
+            {
+                HandleRetry(attempt, ex, options);
+            }
+        }
+    }
+
+    private static void ExecuteInternal<TState>(TState state, Action<TState> action, RetryOptions options)
+    {
+        int attempt = 0;
+        while (true)
+        {
+            attempt++;
+            try
+            {
+                action(state);
                 return;
             }
             catch (Exception ex) when (attempt < options.MaxAttempts && RetryOptions.IsRetriable(ex) && (options.ExceptionFilter == null || options.ExceptionFilter(ex)))
@@ -51,17 +98,46 @@ public static class Retry
     /// <param name="options">Optional retry configuration.</param>
     /// <returns>The result of the function execution.</returns>
     /// <exception cref="ArgumentNullException">Thrown when func is null.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T Execute<T>(Func<T> func, RetryOptions? options = null)
     {
         if (func == null) throw new ArgumentNullException(nameof(func));
         options ??= RetryOptions.Default;
 
-        // Fast path
-        if (options.MaxAttempts <= 1 && options.DelayStrategy == null && options.ExceptionFilter == null && options.OnRetry == null)
+        if (IsFastPath(options))
         {
             return func();
         }
 
+        return ExecuteInternal(func, options);
+    }
+
+    /// <summary>
+    /// Executes the specified function with retry logic, state, and returns the result.
+    /// </summary>
+    /// <typeparam name="T">The return type of the function.</typeparam>
+    /// <typeparam name="TState">The type of the state object.</typeparam>
+    /// <param name="state">The state object to pass to the function.</param>
+    /// <param name="func">The function to execute.</param>
+    /// <param name="options">Optional retry configuration.</param>
+    /// <returns>The result of the function execution.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when func is null.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static T Execute<TState, T>(TState state, Func<TState, T> func, RetryOptions? options = null)
+    {
+        if (func == null) throw new ArgumentNullException(nameof(func));
+        options ??= RetryOptions.Default;
+
+        if (IsFastPath(options))
+        {
+            return func(state);
+        }
+
+        return ExecuteInternal(state, func, options);
+    }
+
+    private static T ExecuteInternal<T>(Func<T> func, RetryOptions options)
+    {
         int attempt = 0;
         while (true)
         {
@@ -75,6 +151,32 @@ public static class Retry
                 HandleRetry(attempt, ex, options);
             }
         }
+    }
+
+    private static T ExecuteInternal<TState, T>(TState state, Func<TState, T> func, RetryOptions options)
+    {
+        int attempt = 0;
+        while (true)
+        {
+            attempt++;
+            try
+            {
+                return func(state);
+            }
+            catch (Exception ex) when (attempt < options.MaxAttempts && RetryOptions.IsRetriable(ex) && (options.ExceptionFilter == null || options.ExceptionFilter(ex)))
+            {
+                HandleRetry(attempt, ex, options);
+            }
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsFastPath(RetryOptions options)
+    {
+        return options.MaxAttempts <= 1 && 
+               options.DelayStrategy == null && 
+               options.ExceptionFilter == null && 
+               options.OnRetry == null;
     }
 
     private static void HandleRetry(int attempt, Exception ex, RetryOptions options)
@@ -107,11 +209,46 @@ public static class Retry
     /// <param name="cancellationToken">Optional token to cancel the execution.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when func is null.</exception>
-    public static async Task ExecuteAsync(Func<CancellationToken, Task> func, RetryOptions? options = null, CancellationToken cancellationToken = default)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task ExecuteAsync(Func<CancellationToken, Task> func, RetryOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (func == null) throw new ArgumentNullException(nameof(func));
         options ??= RetryOptions.Default;
 
+        if (IsFastPath(options))
+        {
+            return func(cancellationToken);
+        }
+
+        return ExecuteInternalAsync(func, options, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the specified asynchronous function with retry logic and state.
+    /// </summary>
+    /// <typeparam name="TState">The type of the state object.</typeparam>
+    /// <param name="state">The state object to pass to the function.</param>
+    /// <param name="func">The asynchronous function to execute.</param>
+    /// <param name="options">Optional retry configuration.</param>
+    /// <param name="cancellationToken">Optional token to cancel the execution.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when func is null.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task ExecuteAsync<TState>(TState state, Func<TState, CancellationToken, Task> func, RetryOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (func == null) throw new ArgumentNullException(nameof(func));
+        options ??= RetryOptions.Default;
+
+        if (IsFastPath(options))
+        {
+            return func(state, cancellationToken);
+        }
+
+        return ExecuteInternalAsync(state, func, options, cancellationToken);
+    }
+
+    private static async Task ExecuteInternalAsync(Func<CancellationToken, Task> func, RetryOptions options, CancellationToken cancellationToken)
+    {
         int attempt = 0;
         while (true)
         {
@@ -120,6 +257,25 @@ public static class Retry
             try
             {
                 await func(cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception ex) when (attempt < options.MaxAttempts && RetryOptions.IsRetriable(ex) && (options.ExceptionFilter == null || options.ExceptionFilter(ex)))
+            {
+                await HandleRetryAsync(attempt, ex, options, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static async Task ExecuteInternalAsync<TState>(TState state, Func<TState, CancellationToken, Task> func, RetryOptions options, CancellationToken cancellationToken)
+    {
+        int attempt = 0;
+        while (true)
+        {
+            attempt++;
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                await func(state, cancellationToken).ConfigureAwait(false);
                 return;
             }
             catch (Exception ex) when (attempt < options.MaxAttempts && RetryOptions.IsRetriable(ex) && (options.ExceptionFilter == null || options.ExceptionFilter(ex)))
@@ -138,11 +294,47 @@ public static class Retry
     /// <param name="cancellationToken">Optional token to cancel the execution.</param>
     /// <returns>A task representing the asynchronous operation, with the function result.</returns>
     /// <exception cref="ArgumentNullException">Thrown when func is null.</exception>
-    public static async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> func, RetryOptions? options = null, CancellationToken cancellationToken = default)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> func, RetryOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (func == null) throw new ArgumentNullException(nameof(func));
         options ??= RetryOptions.Default;
 
+        if (IsFastPath(options))
+        {
+            return func(cancellationToken);
+        }
+
+        return ExecuteInternalAsync(func, options, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the specified asynchronous function with retry logic, state, and returns the result.
+    /// </summary>
+    /// <typeparam name="T">The return type of the function.</typeparam>
+    /// <typeparam name="TState">The type of the state object.</typeparam>
+    /// <param name="state">The state object to pass to the function.</param>
+    /// <param name="func">The asynchronous function to execute.</param>
+    /// <param name="options">Optional retry configuration.</param>
+    /// <param name="cancellationToken">Optional token to cancel the execution.</param>
+    /// <returns>A task representing the asynchronous operation, with the function result.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when func is null.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Task<T> ExecuteAsync<TState, T>(TState state, Func<TState, CancellationToken, Task<T>> func, RetryOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (func == null) throw new ArgumentNullException(nameof(func));
+        options ??= RetryOptions.Default;
+
+        if (IsFastPath(options))
+        {
+            return func(state, cancellationToken);
+        }
+
+        return ExecuteInternalAsync(state, func, options, cancellationToken);
+    }
+
+    private static async Task<T> ExecuteInternalAsync<T>(Func<CancellationToken, Task<T>> func, RetryOptions options, CancellationToken cancellationToken)
+    {
         int attempt = 0;
         while (true)
         {
@@ -151,6 +343,24 @@ public static class Retry
             try
             {
                 return await func(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (attempt < options.MaxAttempts && RetryOptions.IsRetriable(ex) && (options.ExceptionFilter == null || options.ExceptionFilter(ex)))
+            {
+                await HandleRetryAsync(attempt, ex, options, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static async Task<T> ExecuteInternalAsync<TState, T>(TState state, Func<TState, CancellationToken, Task<T>> func, RetryOptions options, CancellationToken cancellationToken)
+    {
+        int attempt = 0;
+        while (true)
+        {
+            attempt++;
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return await func(state, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (attempt < options.MaxAttempts && RetryOptions.IsRetriable(ex) && (options.ExceptionFilter == null || options.ExceptionFilter(ex)))
             {
