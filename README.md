@@ -1,4 +1,4 @@
-# RetrySharp
+# RetrySharp v1.2.0
 
 **RetrySharp** is a lightweight, high-performance retry utility for C# with zero external dependencies. Designed for systems where every microsecond and allocation matters.
 
@@ -8,6 +8,7 @@
 *   **Zero Allocations:** Optimized state-based overloads to eliminate closure allocations on hot paths.
 *   **Fast-Path Optimization:** Executing with `MaxAttempts = 1` results in a direct call with negligible overhead (~1.0 us).
 *   **Sync & Async:** Native, first-class support for both execution paths.
+*   **Input Validation:** `RetryOptions` validates `MaxAttempts` and clamps delay values to prevent overflows.
 *   **Predictable:** No hidden behavior or complex policy chaining.
 *   **Minimalist:** Tiny API surface (learnable in minutes).
 

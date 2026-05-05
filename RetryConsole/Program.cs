@@ -23,6 +23,9 @@ public class Program
         // Example 4: Using the Fast Path (Zero overhead)
         Example4_FastPath();
 
+        // Example 5: Validation (MaxAttempts must be > 0)
+        Example5_Validation();
+
         Console.WriteLine("\n=== Examples Completed ===");
     }
 
@@ -95,5 +98,31 @@ public class Program
         {
             Console.WriteLine("  Direct execution with zero library overhead.");
         }, new RetryOptions { MaxAttempts = 1 });
+    }
+
+    private static void Example5_Validation()
+    {
+        Console.WriteLine("\n--- Example 5: RetryOptions Validation ---");
+
+        try
+        {
+            var options = new RetryOptions { MaxAttempts = 0 };
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            Console.WriteLine($"  Caught expected validation error: {ex.Message}");
+        }
+
+        try
+        {
+            var options = new RetryOptions { MaxAttempts = -5 };
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            Console.WriteLine($"  Caught expected validation error: {ex.Message}");
+        }
+
+        var validOptions = new RetryOptions { MaxAttempts = 3 };
+        Console.WriteLine($"  Valid MaxAttempts set: {validOptions.MaxAttempts}");
     }
 }

@@ -8,13 +8,27 @@ namespace RetrySharp;
 public static class RetryDelays
 {
     /// <summary>
+    /// Clamps a TimeSpan to valid values, preventing overflows and negative delays.
+    /// </summary>
+    /// <param name="delay">The delay to clamp.</param>
+    /// <returns>The clamped delay, or null if input is null.</returns>
+    private static TimeSpan? ClampDelay(TimeSpan? delay)
+    {
+        if (!delay.HasValue) return null;
+        long ticks = delay.Value.Ticks;
+        if (ticks <= 0) return TimeSpan.Zero;
+        if (ticks > TimeSpan.MaxValue.Ticks) return TimeSpan.MaxValue;
+        return delay;
+    }
+
+    /// <summary>
     /// Returns a strategy with a fixed delay between attempts.
     /// </summary>
     /// <param name="delay">The fixed delay to use.</param>
     /// <returns>A delay strategy delegate.</returns>
     public static DelayStrategy Fixed(TimeSpan delay)
     {
-        return (attempt, ex) => delay;
+        return (attempt, ex) => ClampDelay(delay);
     }
 
     /// <summary>
@@ -25,7 +39,7 @@ public static class RetryDelays
     /// <returns>A delay strategy delegate.</returns>
     public static DelayStrategy Linear(TimeSpan initialDelay, TimeSpan factor)
     {
-        return (attempt, ex) => TimeSpan.FromTicks(initialDelay.Ticks + (factor.Ticks * (attempt - 1)));
+        return (attempt, ex) => ClampDelay(TimeSpan.FromTicks(initialDelay.Ticks + (factor.Ticks * (attempt - 1))));
     }
 
     /// <summary>
@@ -36,7 +50,13 @@ public static class RetryDelays
     /// <returns>A delay strategy delegate.</returns>
     public static DelayStrategy Exponential(TimeSpan initialDelay, double multiplier = 2.0)
     {
-        return (attempt, ex) => TimeSpan.FromTicks((long)(initialDelay.Ticks * Math.Pow(multiplier, attempt - 1)));
+        return (attempt, ex) =>
+        {
+            double ticks = initialDelay.Ticks * Math.Pow(multiplier, attempt - 1);
+            if (ticks <= 0) return TimeSpan.Zero;
+            if (ticks > TimeSpan.MaxValue.Ticks) return TimeSpan.MaxValue;
+            return TimeSpan.FromTicks((long)ticks);
+        };
     }
 
     /// <summary>
@@ -51,7 +71,7 @@ public static class RetryDelays
         return (attempt, ex) =>
         {
             long ticks = (long)(initialDelay.Ticks * Math.Pow(multiplier, attempt - 1));
-            return TimeSpan.FromTicks(Math.Min(ticks, maxDelay.Ticks));
+            return ClampDelay(TimeSpan.FromTicks(Math.Min(ticks, maxDelay.Ticks)));
         };
     }
 
@@ -77,7 +97,7 @@ public static class RetryDelays
             if (!delay.HasValue) return null;
 
             double jitter = (GetRandom().NextDouble() * 2.0 - 1.0) * jitterFactor;
-            return TimeSpan.FromTicks((long)(delay.Value.Ticks * (1.0 + jitter)));
+            return ClampDelay(TimeSpan.FromTicks((long)(delay.Value.Ticks * (1.0 + jitter)))) ?? TimeSpan.Zero;
         };
     }
 }

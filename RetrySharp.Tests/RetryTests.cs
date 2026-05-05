@@ -150,4 +150,68 @@ public class RetryTests
 
         Assert.Equal(0, calls);
     }
+
+    [Fact]
+    public void RetryOptions_MaxAttempts_ThrowsOnZero()
+    {
+        var options = new RetryOptions();
+        Assert.Throws<ArgumentOutOfRangeException>(() => options.MaxAttempts = 0);
+    }
+
+    [Fact]
+    public void RetryOptions_MaxAttempts_ThrowsOnNegative()
+    {
+        var options = new RetryOptions();
+        Assert.Throws<ArgumentOutOfRangeException>(() => options.MaxAttempts = -1);
+    }
+
+    [Fact]
+    public void RetryOptions_MaxAttempts_AcceptsPositive()
+    {
+        var options = new RetryOptions { MaxAttempts = 5 };
+        Assert.Equal(5, options.MaxAttempts);
+    }
+
+    [Fact]
+    public void DelayStrategy_ClampsNegativeDelay()
+    {
+        var strategy = RetryDelays.Fixed(TimeSpan.FromMilliseconds(-1));
+        var delay = strategy(1, new Exception());
+        Assert.Equal(TimeSpan.Zero, delay);
+    }
+
+    [Fact]
+    public void DelayStrategy_ClampsOverflowDelay()
+    {
+        var strategy = RetryDelays.Exponential(TimeSpan.FromHours(1000), 2.0);
+        var delay = strategy(100, new Exception());
+        Assert.Equal(TimeSpan.MaxValue, delay);
+    }
+
+    [Fact]
+    public void DelayStrategy_WithJitter_ClampsNegativeDelay()
+    {
+        var baseStrategy = new DelayStrategy((_, _) => TimeSpan.FromMilliseconds(-100));
+        var strategy = RetryDelays.WithJitter(baseStrategy);
+        var delay = strategy(1, new Exception());
+        Assert.NotNull(delay);
+        Assert.True(delay.Value >= TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void CustomDelayStrategy_ReturnValueIsClamped()
+    {
+        int calls = 0;
+        var options = new RetryOptions
+        {
+            MaxAttempts = 3,
+            DelayStrategy = (attempt, ex) => TimeSpan.FromMilliseconds(-50),
+            OnRetry = ctx => calls++
+        };
+
+        Assert.Throws<Exception>(() =>
+            Retry.Execute(() => throw new Exception("fail"), options));
+
+        Assert.Equal(2, calls);
+    }
 }

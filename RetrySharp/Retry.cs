@@ -179,9 +179,18 @@ public static class Retry
                options.OnRetry == null;
     }
 
+    private static TimeSpan? ClampDelay(TimeSpan? delay)
+    {
+        if (!delay.HasValue) return null;
+        long ticks = delay.Value.Ticks;
+        if (ticks <= 0) return TimeSpan.Zero;
+        if (ticks > TimeSpan.MaxValue.Ticks) return TimeSpan.MaxValue;
+        return delay;
+    }
+
     private static void HandleRetry(int attempt, Exception ex, RetryOptions options)
     {
-        TimeSpan? delay = options.DelayStrategy?.Invoke(attempt, ex);
+        TimeSpan? delay = ClampDelay(options.DelayStrategy?.Invoke(attempt, ex));
 
         if (options.OnRetry != null)
         {
@@ -371,7 +380,7 @@ public static class Retry
 
     private static async Task HandleRetryAsync(int attempt, Exception ex, RetryOptions options, CancellationToken cancellationToken)
     {
-        TimeSpan? delay = options.DelayStrategy?.Invoke(attempt, ex);
+        TimeSpan? delay = ClampDelay(options.DelayStrategy?.Invoke(attempt, ex));
 
         if (options.OnRetry != null)
         {

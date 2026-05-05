@@ -33,10 +33,21 @@ public sealed class RetryOptions
     /// </summary>
     public static readonly RetryOptions Default = new();
 
+    private int _maxAttempts = 3;
+
     /// <summary>
     /// The maximum number of attempts allowed, including the initial call. Default is 3.
     /// </summary>
-    public int MaxAttempts { get; set; } = 3;
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when value is less than or equal to 0.</exception>
+    public int MaxAttempts
+    {
+        get => _maxAttempts;
+        set
+        {
+            if (value <= 0) throw new ArgumentOutOfRangeException(nameof(value), "MaxAttempts must be greater than 0.");
+            _maxAttempts = value;
+        }
+    }
 
     /// <summary>
     /// Optional strategy to calculate the delay between retry attempts.
