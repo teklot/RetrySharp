@@ -184,7 +184,6 @@ public static class Retry
         if (!delay.HasValue) return null;
         long ticks = delay.Value.Ticks;
         if (ticks <= 0) return TimeSpan.Zero;
-        if (ticks > TimeSpan.MaxValue.Ticks) return TimeSpan.MaxValue;
         return delay;
     }
 

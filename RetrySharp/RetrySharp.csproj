@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Title>RetrySharp</Title>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <Authors>TekLot,$(AssemblyName)</Authors>
     <Description>RetrySharp is a lightweight, high-performance retry utility for C# with zero external dependencies. Designed for systems where every microsecond and allocation matters.</Description>
     <Copyright>Copyright © 2026 TekLot</Copyright>
@@ -22,9 +22,8 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageReleaseNotes>
-      - Implemented RetryOptions validation: MaxAttempts now throws ArgumentOutOfRangeException if set to 0 or less.
-      - Added TimeSpan clamping to prevent overflows and negative delays in delay strategies.
-      - Custom DelayStrategy delegates now have their return values automatically clamped.
+      - Achieved 100% branch and line coverage on Retry.cs (verified via coverlet).
+      - Removed an unreachable clamp branch in Retry.ClampDelay (a TimeSpan can never exceed TimeSpan.MaxValue.Ticks).
     </PackageReleaseNotes>
   </PropertyGroup>
 

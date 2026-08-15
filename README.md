@@ -1,6 +1,11 @@
-# RetrySharp v1.2.0
+# RetrySharp — High-Performance Retry for .NET
 
-**RetrySharp** is a lightweight, high-performance retry utility for C# with zero external dependencies. Designed for systems where every microsecond and allocation matters.
+[![CI](https://github.com/teklot/RetrySharp/actions/workflows/ci.yml/badge.svg)](https://github.com/teklot/RetrySharp/actions/workflows/ci.yml)
+[![NuGet Version](https://img.shields.io/nuget/v/RetrySharp)](https://www.nuget.org/packages/RetrySharp)
+[![.NET](https://img.shields.io/badge/.NET-netstandard2.0-blue)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+
+**RetrySharp** is a lightweight, high-performance retry utility for .NET with zero external dependencies. Designed for systems where every microsecond and allocation matters.
 
 ## Key Features
 
